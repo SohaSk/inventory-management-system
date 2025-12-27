@@ -12,44 +12,36 @@ export default function Home({ items }) {
   });
   const [editId, setEditId] = useState(null);
 
-  // Dead stock: 90 days
+  // Dead stock logic: 90 days since lastSoldDate
   const isDeadStock = (lastSoldDate) => {
     if (!lastSoldDate) return false;
-    return Date.now() - new Date(lastSoldDate).getTime() > 90 * 24 * 60 * 60 * 1000;
+    const DAYS_90 = 90 * 24 * 60 * 60 * 1000;
+    return Date.now() - new Date(lastSoldDate).getTime() > DAYS_90;
   };
 
-  // Recently sold: 7 days
+  // Recently sold: last 7 days
   const isRecentlySold = (lastSoldDate) => {
     if (!lastSoldDate) return false;
-    return Date.now() - new Date(lastSoldDate).getTime() <= 7 * 24 * 60 * 60 * 1000;
+    const DAYS_7 = 7 * 24 * 60 * 60 * 1000;
+    return Date.now() - new Date(lastSoldDate).getTime() <= DAYS_7;
   };
 
-  // Submit
+  // Submit form
   const submit = async () => {
-    let finalQuantity = Number(form.quantity);
-
-    // If editing & selling stock
-    if (editId && form.quantitySold) {
-      finalQuantity = finalQuantity - Number(form.quantitySold);
-      if (finalQuantity < 0) {
-        alert("Quantity sold cannot exceed available stock");
-        return;
-      }
-    }
+    const url = editId
+      ? `http://localhost:5000/inventory/${editId}`
+      : "http://localhost:5000/inventory";
+    const method = editId ? "PUT" : "POST";
 
     const payload = {
-      name: form.name,
-      sku: form.sku,
-      quantity: finalQuantity,
+      ...form,
+      quantity: Number(form.quantity),
       reorderLevel: Number(form.reorderLevel),
+      quantitySold: Number(form.quantitySold) || 0,
     };
 
-    const url = editId
-      ? `${API_BASE}/inventory/${editId}`
-      : `${API_BASE}/inventory`;
-
     await fetch(url, {
-      method: editId ? "PUT" : "POST",
+      method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
@@ -59,11 +51,13 @@ export default function Home({ items }) {
     location.reload();
   };
 
+  // Delete item
   const del = async (id) => {
-    await fetch(`${API_BASE}/inventory/${id}`, { method: "DELETE" });
+    await fetch(`http://localhost:5000/inventory/${id}`, { method: "DELETE" });
     location.reload();
   };
 
+  // Edit item
   const edit = (i) => {
     setEditId(i._id);
     setForm({
@@ -76,42 +70,76 @@ export default function Home({ items }) {
   };
 
   return (
-    <div style={{ padding: 40, fontFamily: "Arial", maxWidth: 1000, margin: "auto" }}>
-      <h1 style={{ textAlign: "center" }}>Inventory Management</h1>
+    <div style={{ padding: 40, fontFamily: "Arial, sans-serif", maxWidth: 1000, margin: "auto" }}>
+      <h1 style={{ textAlign: "center", color: "#2c3e50" }}>Inventory Management</h1>
 
       {/* Form */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-        <input placeholder="Name" value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })} />
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+        <input
+          placeholder="Name"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          style={{ flex: 1, padding: 8, borderRadius: 5, border: "1px solid #ccc" }}
+        />
+        <input
+          placeholder="SKU"
+          value={form.sku}
+          onChange={(e) => setForm({ ...form, sku: e.target.value })}
+          style={{ flex: 1, padding: 8, borderRadius: 5, border: "1px solid #ccc" }}
+        />
+        <input
+          type="number"
+          placeholder="Qty"
+          value={form.quantity}
+          onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+          style={{ flex: 1, padding: 8, borderRadius: 5, border: "1px solid #ccc" }}
+        />
+        <input
+          type="number"
+          placeholder="Reorder Level"
+          value={form.reorderLevel}
+          onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })}
+          style={{ flex: 1, padding: 8, borderRadius: 5, border: "1px solid #ccc" }}
+        />
 
-        <input placeholder="SKU" value={form.sku}
-          onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-
-        <input type="number" placeholder="Quantity" value={form.quantity}
-          onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
-
-        <input type="number" placeholder="Reorder Level" value={form.reorderLevel}
-          onChange={(e) => setForm({ ...form, reorderLevel: e.target.value })} />
-
+        {/* Quantity Sold input only shown when editing */}
         {editId && (
           <input
             type="number"
             placeholder="Quantity Sold"
             value={form.quantitySold}
             onChange={(e) => setForm({ ...form, quantitySold: e.target.value })}
+            style={{ flex: 1, padding: 8, borderRadius: 5, border: "1px solid #ccc" }}
           />
         )}
 
-        <button onClick={submit}>
+        <button
+          onClick={submit}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 5,
+            border: "none",
+            backgroundColor: "#3498db",
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
           {editId ? "Update" : "Add"}
         </button>
       </div>
 
-      {/* Table */}
-      <table border="1" cellPadding="10" width="100%">
+      {/* Inventory Table */}
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          textAlign: "left",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        }}
+      >
         <thead>
-          <tr>
-            <th>SKU</th>
+          <tr style={{ backgroundColor: "#2c3e50", color: "white" }}>
+            <th style={{ padding: 10 }}>SKU</th>
             <th>Name</th>
             <th>Qty</th>
             <th>Reorder</th>
@@ -126,26 +154,59 @@ export default function Home({ items }) {
             const deadStock = isDeadStock(i.lastSoldDate);
             const recentlySold = isRecentlySold(i.lastSoldDate);
 
+            let bg = "#d6ffd6"; // healthy
             let status = "Healthy";
-            if (deadStock) status = "Dead Stock";
-            else if (lowStock) status = "Low Stock";
-            else if (recentlySold) status = "Recently Sold";
+
+            if (deadStock) {
+              bg = "#e0e0e0";
+              status = "Dead Stock";
+            } else if (lowStock) {
+              bg = "#ffd6d6";
+              status = "Low Stock";
+            } else if (recentlySold) {
+              bg = "#ffe8b3"; // light yellow for recent sale
+              status = "Recently Sold";
+            }
 
             return (
-              <tr key={i._id}>
-                <td>{i.sku}</td>
+              <tr key={i._id} style={{ background: bg, transition: "background 0.3s", cursor: "default" }}>
+                <td style={{ padding: 8 }}>{i.sku}</td>
                 <td>{i.name}</td>
                 <td>{i.quantity}</td>
                 <td>{i.reorderLevel}</td>
                 <td>{status}</td>
                 <td>
-                  {i.lastSoldDate
-                    ? new Date(i.lastSoldDate).toISOString().split("T")[0]
-                    : "-"}
-                </td>
+  {i.lastSoldDate ? new Date(i.lastSoldDate).toISOString().split("T")[0] : "-"}
+</td>
+
                 <td>
-                  <button onClick={() => edit(i)}>Edit</button>
-                  <button onClick={() => del(i._id)}>Delete</button>
+                  <button
+                    onClick={() => edit(i)}
+                    style={{
+                      marginRight: 5,
+                      padding: "4px 8px",
+                      borderRadius: 3,
+                      border: "none",
+                      backgroundColor: "#f39c12",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => del(i._id)}
+                    style={{
+                      padding: "4px 8px",
+                      borderRadius: 3,
+                      border: "none",
+                      backgroundColor: "#e74c3c",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete
+                  </button>
                 </td>
               </tr>
             );
@@ -155,6 +216,8 @@ export default function Home({ items }) {
     </div>
   );
 }
+
+
 
 export async function getServerSideProps() {
   const res = await fetch(`${API_BASE}/inventory`);
