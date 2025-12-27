@@ -29,8 +29,8 @@ export default function Home({ items }) {
   // Submit form
   const submit = async () => {
     const url = editId
-      ? `http://localhost:5000/inventory/${editId}`
-      : "http://localhost:5000/inventory";
+      ? `${API_BASE}/inventory/${editId}`
+      : `${API_BASE}/inventory`;
     const method = editId ? "PUT" : "POST";
 
     const payload = {
@@ -53,7 +53,7 @@ export default function Home({ items }) {
 
   // Delete item
   const del = async (id) => {
-    await fetch(`http://localhost:5000/inventory/${id}`, { method: "DELETE" });
+    await fetch(`${API_BASE}/inventory/${id}`, { method: "DELETE" });
     location.reload();
   };
 
@@ -175,10 +175,7 @@ export default function Home({ items }) {
                 <td>{i.quantity}</td>
                 <td>{i.reorderLevel}</td>
                 <td>{status}</td>
-                <td>
-  {i.lastSoldDate ? new Date(i.lastSoldDate).toISOString().split("T")[0] : "-"}
-</td>
-
+                <td>{i.lastSoldDate ? new Date(i.lastSoldDate).toISOString().split("T")[0] : "-"}</td>
                 <td>
                   <button
                     onClick={() => edit(i)}
@@ -217,8 +214,7 @@ export default function Home({ items }) {
   );
 }
 
-
-
+// Fetch data from backend
 export async function getServerSideProps() {
   const res = await fetch(`${API_BASE}/inventory`);
   const items = await res.json();
